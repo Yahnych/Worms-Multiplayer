@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+<head>
+        <style>
+            body,
+            canvas {
+                margin: 0;
+                padding: 0;
+                overflow: hidden;
+            }
+        </style>
+</head>
+    <body  onload="init()">
+	   <canvas id="canvas-id" width="800" height="600">
+            <script src="socket.io/socket.io.js"></script>
+            <script>
+                function areColliding(Ax, Ay, Awidth, Aheight, Bx, By, Bwidth, Bheight) {
+                if (Bx <= Ax + Awidth) {
+                    if (Ax <= Bx + Bwidth) {
+                        if (By <= Ay + Aheight) {
+                            if (Ay <= By + Bheight) {
+                                return 1;
+                            }
+                        }
+                    }
+                }
+                return 0;
+            };
+
+            function areCircleColliding(x1,y1,r1,x2,y2,r2) {
+                if( (x2-x1)*(x2-x1) + (y2-y1)*(y2-y1) <= (r2+r1)*(r2+r1) ) {
+                    return 1;   
+                }
+                return 0;
+            };
+
+            function drawLine(x1, y1, x2, y2) {
+                context.beginPath();
+                context.moveTo(x1, y1);
+                context.lineTo(x2, y2);
+                context.stroke();
+            }
+
+            function drawFillCirlce(x, y, r) {
+                context.beginPath();
+                context.arc(x, y, r, 0, 2*Math.PI);
+                context.fill();
+            }
+
+            function drawStrokeCirlce(x, y, r) {
+                context.beginPath();
+                context.arc(x, y, r, 0, 2*Math.PI);
+                context.stroke();
+            }
+
+            function drawPolygon(x, y, length, sides) {
+                context.beginPath();
+                context.moveTo(x + length, y);
+                for(let i=0;i<sides;i++) {
+                    let angle = ((Math.PI*2)/sides)*i;
+                    context.lineTo(x + Math.cos(angle)*length, y + Math.sin(angle)*length);
+                }
+                context.closePath();
+            }
+
+            function drawFillPolygon(x, y, length, sides) {
+                drawPolygon(x,y,length,sides);
+                context.fill();
+            }
+            function drawStrokePolygon(x, y, length, sides) {
+                drawPolygon(x,y,length,sides);
+                context.stroke();
+            }
+
+            function randomInt(num) {
+                return Math.floor(Math.random()*num);
+            }
+
+            function dist(x1, y1, x2, y2) {
+                return Math.sqrt( (x1-x2)*(x1-x2)+(y1-y2)*(y1-y2) );
+            }
+            var endlessCanvas = false;
+            var canvas = document.getElementById("canvas-id");
+            if (endlessCanvas) {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                window.onresize = function () {
+                    canvas.width = window.innerWidth;
+                    canvas.height = window.innerHeight;
+                };
+            }
+            else {
+                canvas.width = 800;
+                canvas.height = 600;
+            }
+            var context = canvas.getContext("2d");
+            context.fillStyle = "#000000";
+
+            // global variables with mouse coordinates
+            var mouseX = 0;
+            var mouseY = 0;
+
+            // some keycodes
+            var key_left = 37;
+            var key_up = 38;
+            var key_right = 39;
+            var key_down = 40;
+            var key_z = 90;
+            var key_w = 87;
+            var key_s = 83;
+            var key_d = 68;
+            var key_a = 65; 
+
+            var isKeyPressed = [];
+            for (i = 0; i < 256; ++i) {
+                isKeyPressed.push(0);
+            }
+            // gridSize = 50; // uncomment or add to game.js if you want a grid
+            var reqAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame || window.webkitRequestAnimationFrame || window.msRequestAnimationFrame || function (callback) {
+                setTimeout(callback, 1000 / 30);
+            };
+
+            function redraw() {
+                context.clearRect(0, 0, canvas.width, canvas.height);
+                context.globalAlpha = 1;
+                // draw grid
+                //context.fillStyle = "#FF0000";
+                context.font = "10px Arial";
+                if (typeof gridSize != "undefined" && gridSize >= 25) {
+                    context.fillText(0, 4, 10);
+                    context.beginPath();
+                    for (i = gridSize; i < canvas.width; i += gridSize) {
+                        context.moveTo(i, 0);
+                        context.lineTo(i, canvas.height);
+                        context.fillText(i, i + 4, 10);
+                    }
+                    for (i = gridSize; i < canvas.height; i += gridSize) {
+                        context.moveTo(0, i);
+                        context.lineTo(canvas.width, i);
+                        context.fillText(i, 4, i + 10);
+                    }
+                    context.stroke();
+                }
+                draw(); // call progammer's draw() function
+                reqAnimationFrame(redraw);
+            };
+
+            function callupdate() {
+                update(); // call programmer's update() function
+                setTimeout(callupdate, 10); // and 10 ms after that ...
+            };
+
+            function init() {
+                if (endlessCanvas) {
+                    canvas.width = window.innerWidth;
+                    canvas.height = window.innerHeight;
+                    window.onresize = function () {
+                        canvas.width = window.innerWidth;
+                        canvas.height = window.innerHeight;
+                    };
+                } else {
+                    canvas.width = 800;
+                    canvas.height = 600;
+                }
+                if ('ontouchstart' in window || navigator.maxTouchPoints) {
+                    isMobile = true;
+                    window.addEventListener("touchstart", function (e) {
+                        var touchobj = e.changedTouches[0];
+                        mouseX = parseInt(touchobj.pageX - canvas.offsetLeft);
+                        mouseY = parseInt(touchobj.pageY - canvas.offsetTop);
+                        mousedown();
+                    });
+                    window.addEventListener("touchend", function (e) {
+                        var touchobj = e.changedTouches[0];
+                        mouseX = parseInt(touchobj.pageX - canvas.offsetLeft);
+                        mouseY = parseInt(touchobj.pageY - canvas.offsetTop);
+                        mouseup();
+                    });
+                    window.addEventListener("touchmove", function (e) {
+                        var touchobj = e.changedTouches[0];
+                        mouseX = parseInt(touchobj.pageX - canvas.offsetLeft);
+                        mouseY = parseInt(touchobj.pageY - canvas.offsetTop);
+                    });
+                }
+                window.addEventListener("mousemove", function (e) {
+                    mouseX = e.pageX - canvas.offsetLeft;
+                    mouseY = e.pageY - canvas.offsetTop;
+                });
+                if (typeof mousemove != "undefined") {
+                    window.addEventListener("mousemove", mousemove);
+                }
+                if (typeof mouseup != "undefined") {
+                    window.addEventListener("mouseup", mouseup);
+                }
+                if (typeof mousedown != "undefined") {
+                    window.addEventListener("mousedown", mousedown);
+                }
+                if (typeof keydown != "undefined") {
+                    window.addEventListener("keydown", function (e) {
+                        isKeyPressed[e.keyCode] = 1;
+                        keydown(e.keyCode);
+                    });
+                }
+                else {
+                    window.addEventListener("keydown", function (e) {
+                        isKeyPressed[e.keyCode] = 1;
+                    });
+                }
+                if (typeof keyup != "undefined") {
+                    window.addEventListener("keyup", function (e) {
+                        isKeyPressed[e.keyCode] = 0;
+                        keyup(e.keyCode);
+                    });
+                }
+                else {
+                    window.addEventListener("keyup", function (e) {
+                        isKeyPressed[e.keyCode] = 0;
+                    });
+                }
+                if (typeof draw == "undefined") {
+                    redraw = function () {
+                        context.clearRect(0, 0, canvas.width, canvas.height);
+                        context.globalAlpha = 1;
+                        context.fillStyle = "#FF0000";
+                        context.font = "20px Arial";
+                        context.fillText("Press <F12> for error info!", 40, 40);
+                    };
+                }
+                redraw();
+                callupdate();
+            };
+            //version ~9- edited by roshav. Should be fine with all touchscreendevices. Uploaded to iashu.free.bg/code.zip on 24.12.2016
+            </script>
+            <script src="game.js"></script>
+        </canvas>
+    </body>
+</html>
