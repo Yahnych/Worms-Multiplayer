@@ -12,13 +12,12 @@ getFiles('/', 'start.html')
 getFiles('game.js', 'game.js');
 
 class Player {
-    constructor(id, x, y) {
-        this.x = Math.floor(Math.random()*800);
+    constructor(x, y) {
+        this.x = x;
         this.y = y;
         this.w = 30;
         this.h = 30;
         this.hp = 100;
-        this.id = id;
         this.connected = true;
     }
 }
@@ -97,6 +96,7 @@ class Weapon {
 
 let blocks = 400;
 function createTerrain() {
+    
     let height = [];
     function smooth(inp) {
         let newHeight = [];
@@ -106,7 +106,7 @@ function createTerrain() {
         return newHeight;
     }
     const px = 40;
-    height[0] = 550;
+    height[0] = 450;
     for(let i=1;i<blocks;i++) {
         height[i] = height[i-1]+Math.floor(Math.random()*px-(px/2));
     }
@@ -114,7 +114,8 @@ function createTerrain() {
 }
 
 let p = [], terrain = createTerrain(), b = [];
-let clients = 0;
+console.log(terrain);
+let clients = 0, turn = -1;
 io.on('connection', (socket) => {
     let id = clients;
     for (let i=0;i<clients;i++){
@@ -124,18 +125,27 @@ io.on('connection', (socket) => {
         }
     }
     console.log("Client:",id," has joined.")
-    p.push(new Player(id, blocks*5, terrain[Math.floor(Math.random()*blocks)]-30));
+    for(let i=0;i<blocks;i++) {
+        p[id] = new Player(Math.floor(Math.random()*(blocks*10)), Math.random()*terrain[i]);
+    }
+    console.log(p[id].y)
     clients++;
-    socket.emit('init', p, terrain, id);
+    socket.emit('init', p, terrain, id, turn);
     socket.broadcast.emit('players', p[id], id);
 
     socket.on('move', (p_) => {
         p[id] = p_;
         socket.broadcast.emit('players', p[id], id);
     });
-
     socket.on('shoot', (tx, ty, id_) => {
         b.push(new Bullet(p[id_].x, p[id_].y, tx, ty, id_));
+    });
+
+    socket.on('remove bullet', (id_, b_) => {
+        b[id_] = b_;
+        b[id_] = b[b.length-1];
+        b.pop();
+        io.emit('bullets', b);
     });
 
     socket.on("dead", function(id_) {
@@ -163,10 +173,12 @@ function areColliding(Ax, Ay, Awidth, Aheight, Bx, By, Bwidth, Bheight) {
 	}
 	return 0;
 }
+
 function removeBullet(index) {
     b[index] = b[b.length-1];
     b.pop();
 }
+
 function update() {
     for(let i=0;i<b.length;i++) {
         b[i].move();
@@ -181,10 +193,13 @@ function update() {
             }
         }
         if(i >= b.length) break;
-        if(b[i].x<0 || b[i].x>=blocks*5 || b[i].y<0 || b[i].y>=height.max) {
-            removeBullet(i);
-        }
-        
+        // for(let j=0;j<terrain.length;j++) {
+        //     if(b[i].x<0 || b[i].x>=j*5 || b[i].y<0 || b[i].y>=terrain[j]) {
+        //         removeBullet(i);
+        //         io.emit('bullets', b);
+        //         break
+        //     }
+        // }
     }
     io.emit('bullets', b);
 }

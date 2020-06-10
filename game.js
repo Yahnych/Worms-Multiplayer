@@ -1,5 +1,4 @@
 var socket = io();
-endlessCanvas = true;
 function lerp(a, b, t) {
 	return {x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t};
 }
@@ -19,11 +18,13 @@ function p4curve(a, b, c, d, t) {
 const bs = 10, blocks = 200;
 let p = [], id = -1, height = [];
 let b = [];
+let turn, terrfunc;
 
-socket.on('init', (p_, terr, id_) => {
+socket.on('init', (p_, terr, id_, turn_) => {
     p = p_;
     height = terr;
     id = id_;
+    turn = turn_;
 });
 socket.on('players', (p_, id_) => {
     p[id_] = p_;
@@ -33,7 +34,7 @@ socket.on('bullets', (b_) => {
 });
 let isDead = false;
 function update() {
-    if(id == -1) return;
+    if(id == -1 ) return;
     let isMoving = false, s = 3, isFly = true;
     if(isFly) {
         isMoving = true;
@@ -45,6 +46,11 @@ function update() {
         if(areColliding(p[id].x, p[id].y, p[id].w, p[id].h, i*bs, height[i], bs, bs)) {
             p[id].y = height[i]-p[id].h;
             isFly = false;
+        }
+        for(let j=0;j<b.length;j++) {
+            if(areColliding(i*bs, height[i], bs, bs, b[j].x, b[j].y, 3, 3)) {
+                socket.emit('remove bullet', b[j], j);
+            }
         }
     }
     if(isMoving) {
@@ -86,6 +92,8 @@ function minimap() {
             context.fillRect(e.x, e.y, bs, bs);
         }
     }
+    for(let i=0;i<blocks;i++) {
+    }
     context.restore();
 }
 
@@ -125,7 +133,7 @@ function keyup(key) {
 }
 function mouseup() {
     console.log("X:",mouseX,"Y:", mouseY);
-    if(p[id].connected) {
+    if(p[id].connected && turn!=-1) {
         socket.emit('shoot', mouseX, mouseY, id);
     }
 }
