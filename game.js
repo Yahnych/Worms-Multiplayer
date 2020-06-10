@@ -15,7 +15,7 @@ function p4curve(a, b, c, d, t) {
 	return lerp(l0, l1, t);
 }
 
-const bs = 10, blocks = 200;
+const bs = 10, blocks = 100;
 let p = [], id = -1, height = [];
 let b = [];
 let turn, terrfunc;
@@ -26,6 +26,9 @@ socket.on('init', (p_, terr, id_, turn_) => {
     id = id_;
     turn = turn_;
 });
+socket.on('turn', (turn_) => {
+    turn = turn_;
+});
 socket.on('players', (p_, id_) => {
     p[id_] = p_;
 });
@@ -34,7 +37,7 @@ socket.on('bullets', (b_) => {
 });
 let isDead = false;
 function update() {
-    if(id == -1 ) return;
+    if(id == -1 && turn!=id) return;
     let isMoving = false, s = 3, isFly = true;
     if(isFly) {
         isMoving = true;
@@ -42,6 +45,8 @@ function update() {
     }
     if(isKeyPressed[65]) {p[id].x-=s;isMoving = true}
     if(isKeyPressed[68]) {p[id].x+=s;isMoving = true}
+    if(p[id].x<=0) {p[id].x = 0; isMoving = true;}
+    if(p[id].x>=blocks*bs-100) {p[id].x = blocks*bs-100; isMoving = true;}
     for(let i=0;i<blocks;i++) {
         if(areColliding(p[id].x, p[id].y, p[id].w, p[id].h, i*bs, height[i], bs, bs)) {
             p[id].y = height[i]-p[id].h;
@@ -99,6 +104,7 @@ function minimap() {
 
 function draw() {
     context.save();
+    // context.translate();
     // context.strokeRect(0,0,800,600);
     for(let i=0;i<p.length;i++) {
         if(p[i].connected) {
@@ -114,11 +120,11 @@ function draw() {
         context.arc(b[i].x, b[i].y, 3, 0, 2*Math.PI);
         context.fill();
     }
-    for(let i=0;i<blocks-2;i+=2) {
+    for(let i=0;i<blocks;i+=1) {
         for(let j=0;j<1;j+=.05) {
             let a = {x:i*bs, y:height[i]}
-            let b = {x:(i+1)*bs, y:height[i+1]}
-            let c = {x:(i+2)*bs, y:height[i+2]}
+            let b = {x:(i-1)*bs, y:height[i-1]}
+            let c = {x:(i-2)*bs, y:height[i-2]}
             // let d = {x:(i+3)*bs, y:height[i+3]}
             let e = p3curve(a, b, c, j);
             context.fillRect(e.x, e.y, bs, bs);
@@ -133,7 +139,7 @@ function keyup(key) {
 }
 function mouseup() {
     console.log("X:",mouseX,"Y:", mouseY);
-    if(p[id].connected && turn!=-1) {
+    if(p[id].connected && turn!=id) {
         socket.emit('shoot', mouseX, mouseY, id);
     }
 }

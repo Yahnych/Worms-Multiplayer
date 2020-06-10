@@ -12,11 +12,12 @@ getFiles('/', 'start.html')
 getFiles('game.js', 'game.js');
 
 class Player {
-    constructor(x, y) {
-        this.x = x;
-        this.y = y;
+    constructor() {
+        this.x = -1;
+        this.y = -1;
         this.w = 30;
         this.h = 30;
+        this.id = -1;
         this.hp = 100;
         this.connected = true;
     }
@@ -94,7 +95,7 @@ class Weapon {
     }
 }
 
-let blocks = 400;
+let blocks = 100;
 function createTerrain() {
     
     let height = [];
@@ -105,7 +106,7 @@ function createTerrain() {
         }
         return newHeight;
     }
-    const px = 40;
+    const px = 100;
     height[0] = 450;
     for(let i=1;i<blocks;i++) {
         height[i] = height[i-1]+Math.floor(Math.random()*px-(px/2));
@@ -114,7 +115,7 @@ function createTerrain() {
 }
 
 let p = [], terrain = createTerrain(), b = [];
-console.log(terrain);
+// console.log(terrain);
 let clients = 0, turn = -1;
 io.on('connection', (socket) => {
     let id = clients;
@@ -124,15 +125,28 @@ io.on('connection', (socket) => {
             break;
         }
     }
-    console.log("Client:",id," has joined.")
+    p[id] = new Player();
+    // console.log("Client:",id," has joined.");
+    let a = Math.floor(Math.random()*blocks);
     for(let i=0;i<blocks;i++) {
-        p[id] = new Player(Math.floor(Math.random()*(blocks*10)), Math.random()*terrain[i]);
+        if(i == a) {
+            p[id].x = i*10;
+            p[id].y = terrain[a];
+            p[id].id = id;
+        }
     }
-    console.log(p[id].y)
+    if(p[id].y == undefined) {
+        a = Math.floor(Math.random()*blocks);
+        p[id].y = terrain[a];
+    }
+    console.log("X:", p[id].x, "Y:",p[id].y)
     clients++;
     socket.emit('init', p, terrain, id, turn);
     socket.broadcast.emit('players', p[id], id);
-
+    if(clients >= 2) {
+        turn = id;
+        socket.emit('turn', turn, id);  
+    }
     socket.on('move', (p_) => {
         p[id] = p_;
         socket.broadcast.emit('players', p[id], id);
@@ -157,6 +171,8 @@ io.on('connection', (socket) => {
         p[id].connected = false;
         p[id].x = undefined;
         p[id].y = undefined;
+        clients--;
+        console.log("Disconnected:"+clients);
         io.emit("players", p[id], id);
     });
 });
@@ -183,7 +199,7 @@ function update() {
     for(let i=0;i<b.length;i++) {
         b[i].move();
         for(let j=0;j<p.length;j++) {
-            if(areColliding(b[i].x, b[i].y, 5, 5, p[j].x, p[j].y, p[j].w, p[j].h) && p[j].connected) {
+            if(areColliding(b[i].x, b[i].y, 5, 5, p[j].x, p[j].y, p[j].w, p[j].h) && p[j].connected && p[j].id!=b[i].id) {
                 if(b[i].id!=p[j].id) {
                     p[j].hp-=b[i].dmg;
                     removeBullet(i);
