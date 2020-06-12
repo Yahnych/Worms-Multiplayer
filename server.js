@@ -10,14 +10,20 @@ function getFiles(name, file) {
 }
 getFiles('/', 'start.html')
 getFiles('game.js', 'game.js');
+getFiles('loading.gif', 'imgs/loading.gif');
+for(let i=0;i<16;i++) {
+    getFiles('imgs/inv/'+i+'.png', 'imgs/inv/'+i+'.png');
+}
 
 class Player {
-    constructor() {
-        this.x = -1;
-        this.y = -1;
+    constructor(x, y, id) {
+        this.x = x;
+        this.y = y;
         this.w = 30;
         this.h = 30;
-        this.id = -1;
+        this.name = '';
+        this.time = 60;
+        this.id = id;
         this.hp = 100;
         this.connected = true;
     }
@@ -34,68 +40,20 @@ class Bullet {
         this.dy*=10;
         this.id = id;
         this.dmg = 10;
+        this.type = 'none';
     }
     move() {
         this.x+=this.dx;
         this.y+=this.dy; 
     }
-}
-class Weapon {
-    constructor(x ,y, type) {
-        this.x = x;
-        this.y = y;
-        this.s = p.s;
-        this.type = type;
-        if(this.type == 'pistol') {
-            this.w = 40;
-            this.h = 21;
-            this.dmg = 100;
+    remove() {
+        if(this.x<=0 || this.y<=0 || this.x>=4000 || this.y>=1000) {
+            return 1;
         }
-        if(this.type == 'rpg') {
-            this.w = 69;
-            this.h = 36;
-            this.dmg = 200;
-        }
-        this.bullets = 1000;
-        // this.bulletsHolding = bulletsHolding; // ms for the moment to shoot
-        this.b = [];
-    }
-    shoot(tx, ty) {
-        if(this.bullets>0) {
-            this.bullets--;
-            this.b.push(new Bullet(this.x+this.angle, this.y, tx, ty));
-        }
-    }
-    move() {
-        this.tx = mouseX;
-        this.ty = mouseY;
-        for(let i=0;i<this.b.length;i++) {
-            if(this.type == 'pistol') {
-                this.b[i].move(1);
-            }
-            if(this.type == 'rpg') {
-                this.b[i].move(0.5);
-            }
-        }
-        if(isKeyPressed[65] || isKeyPressed[37]) {this.x-=this.s}
-        if(isKeyPressed[68] || isKeyPressed[39]) {this.x+=this.s}
-    }
-    draw() {
-        this.angle = Math.atan2(this.ty-this.y, this.tx-this.x);
-        context.save();
-        context.translate(this.x, this.y);
-        context.rotate(this.angle);
-        context.fillStyle = "black";
-        if(mouseX>this.x) {
-            context.fillRect(0, 0, this.w, this.h);
-        }else{
-            context.fillRect(0, -30, this.w, this.h);
-        }
-        context.restore();
+        return 0;
     }
 }
-
-let blocks = 100;
+let blocks = 200;
 function createTerrain() {
     
     let height = [];
@@ -106,8 +64,8 @@ function createTerrain() {
         }
         return newHeight;
     }
-    const px = 100;
-    height[0] = 450;
+    const px = 70;
+    height[0] = 500;
     for(let i=1;i<blocks;i++) {
         height[i] = height[i-1]+Math.floor(Math.random()*px-(px/2));
     }
@@ -116,7 +74,7 @@ function createTerrain() {
 
 let p = [], terrain = createTerrain(), b = [];
 // console.log(terrain);
-let clients = 0, turn = -1;
+let clients = 0, turn = 0;
 io.on('connection', (socket) => {
     let id = clients;
     for (let i=0;i<clients;i++){
@@ -125,34 +83,41 @@ io.on('connection', (socket) => {
             break;
         }
     }
+    if(id == clients) clients++;
+    console.log("ID:"+id+" has joined", "Clients:"+clients);
     p[id] = new Player();
-    // console.log("Client:",id," has joined.");
     let a = Math.floor(Math.random()*blocks);
     for(let i=0;i<blocks;i++) {
         if(i == a) {
-            p[id].x = i*10;
-            p[id].y = terrain[a];
-            p[id].id = id;
+            p[id] = new Player(i*10, terrain[a], id);
         }
     }
     if(p[id].y == undefined) {
         a = Math.floor(Math.random()*blocks);
         p[id].y = terrain[a];
     }
-    console.log("X:", p[id].x, "Y:",p[id].y)
-    clients++;
     socket.emit('init', p, terrain, id, turn);
     socket.broadcast.emit('players', p[id], id);
-    if(clients >= 2) {
-        turn = id;
-        socket.emit('turn', turn, id);  
-    }
+    io.emit('clients', clients);
+    socket.on('play', () => {
+        io.emit('play', turn);
+    });
     socket.on('move', (p_) => {
         p[id] = p_;
         socket.broadcast.emit('players', p[id], id);
     });
-    socket.on('shoot', (tx, ty, id_) => {
-        b.push(new Bullet(p[id_].x, p[id_].y, tx, ty, id_));
+    socket.on('end turn', (id_) => {
+        if(turn == id_) {
+            turn++;
+            io.emit('turn', turn);
+            console.log(id_+" finish the turn.")
+        }
+        if(turn>clients-1) {
+            turn = 0;
+        }
+    });
+    socket.on('shoot', (tx, ty, id_, type_) => {
+        b.push(new Bullet(p[id_].x+15, p[id_].y+15, tx, ty, id_));
     });
 
     socket.on('remove bullet', (id_, b_) => {
@@ -161,6 +126,11 @@ io.on('connection', (socket) => {
         b.pop();
         io.emit('bullets', b);
     });
+
+    socket.on('terrain', (terrain_) => {
+        terrain = terrain_;
+        socket.broadcast.emit('terrain', terrain);
+    })
 
     socket.on("dead", function(id_) {
         p[id_].connected = false;
@@ -172,6 +142,7 @@ io.on('connection', (socket) => {
         p[id].x = undefined;
         p[id].y = undefined;
         clients--;
+        io.emit('clients', clients);
         console.log("Disconnected:"+clients);
         io.emit("players", p[id], id);
     });
@@ -198,6 +169,11 @@ function removeBullet(index) {
 function update() {
     for(let i=0;i<b.length;i++) {
         b[i].move();
+        if(b[i].x<=0 || b[i].x>=4000 || b[i].y<=0 || b[i].y>=4000) {
+            b[i] = b[b.length-1];
+            b.pop();
+            break;
+        }
         for(let j=0;j<p.length;j++) {
             if(areColliding(b[i].x, b[i].y, 5, 5, p[j].x, p[j].y, p[j].w, p[j].h) && p[j].connected && p[j].id!=b[i].id) {
                 if(b[i].id!=p[j].id) {
@@ -209,13 +185,6 @@ function update() {
             }
         }
         if(i >= b.length) break;
-        // for(let j=0;j<terrain.length;j++) {
-        //     if(b[i].x<0 || b[i].x>=j*5 || b[i].y<0 || b[i].y>=terrain[j]) {
-        //         removeBullet(i);
-        //         io.emit('bullets', b);
-        //         break
-        //     }
-        // }
     }
     io.emit('bullets', b);
 }
