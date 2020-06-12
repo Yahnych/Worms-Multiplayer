@@ -41,7 +41,7 @@ socket.on('terrain', (terrain_) => {
 });
 socket.on('clients', (clients) => {
     players = clients;
-    if(players>1) {
+    if(players>0) {
         waiting = false;
         socket.emit('play');
     }
@@ -56,22 +56,24 @@ socket.on('turn', (turn_) => {
 let isDead = false;
 
 let inveontoryGrid = [], images = [];
-for(let x=0;x<4;x++) {
+for(let x=0;x<2;x++) {
     inveontoryGrid[x] = [];
     for(let y=0;y<4;y++) {
         inveontoryGrid[x][y] = 0;
     }
 }
 
-inveontoryGrid[0][0] = 'Pistol';inveontoryGrid[1][0] = 'Shotgun';inveontoryGrid[2][0] = 'Sniper';inveontoryGrid[3][0] = 'Lazer';
-inveontoryGrid[0][1] = 'Jetpack';inveontoryGrid[1][1] = 'Mine';inveontoryGrid[2][1] = 'Granade';inveontoryGrid[3][1] = 'Air strike';
-inveontoryGrid[0][2] = 'Dynamite';inveontoryGrid[1][2] = 'Bat';inveontoryGrid[2][2] = 'Harpoon';inveontoryGrid[3][2] = 'Bazooka';
-inveontoryGrid[0][3] = 'Teleport';inveontoryGrid[1][3] = 'Ak-47';inveontoryGrid[2][3] = 'Pickaxe';inveontoryGrid[3][3] = '';
+inveontoryGrid[0][0] = 'Pistol';inveontoryGrid[1][0] = 'AK-47';
+inveontoryGrid[0][1] = 'Lazer';inveontoryGrid[1][1] = 'Mine';
+inveontoryGrid[0][2] = 'Granade';inveontoryGrid[1][2] = 'Air strike';
+inveontoryGrid[0][3] = 'Dynamite';inveontoryGrid[1][3] = 'Bazooka';
 
-for(let i=0;i<16;i++) {
+for(let i=0;i<8;i++) {
     images[i] = new Image();
     images[i].src = 'imgs/inv/'+i+'.png';
 }
+let d = -200;
+let invX = 0, invY = 210;
 function update() {
     if(id == -1 && turn!=id) return;
     let isMoving = false, s = 3, isFly = true;
@@ -79,6 +81,10 @@ function update() {
         isMoving = true;
         p[id].y+=5;
     }
+    if(showInventory) d+=8;
+    if(showInventory==false) d -=8;
+    if(d>10) d = 10;
+    if(d<=-150) d = -150;
     if(isKeyPressed[65]) {p[id].x-=s;isMoving = true}
     if(isKeyPressed[68]) {p[id].x+=s;isMoving = true}
     if(p[id].x<=0) {p[id].x = 0; isMoving = true;}
@@ -118,6 +124,31 @@ function timer() {
     }
 }
 setInterval(timer, 1000);
+
+function drawWeapon(w, h, image) {
+    let angle = Math.atan2(mouseY-p[id].y, mouseX-p[id].x);
+    context.save();
+    context.translate(p[id].x+(p[id].w/2), p[id].y+(p[id].h/2));
+    context.rotate(angle);
+    if(mouseX>p[id].x) {
+        context.drawImage(image, 0, 0, w, h);
+    }else{
+        context.drawImage(image, -30, 0, w, h);
+    }
+    context.restore();
+}
+function drawWeapon2(w, h, image, image2) {
+    let angle = Math.atan2(mouseY-p[id].y, mouseX-p[id].x);
+    context.save();
+    context.translate(p[id].x+(p[id].w/2), p[id].y+(p[id].h/2));
+    context.rotate(angle);
+    if(mouseX>p[id].x) {
+        context.drawImage(image, 0, 0, w, h);
+    }else{
+        context.drawImage(image2, 0, -30, w, h);
+    }
+    context.restore();
+}
 
 function drawHealthbar(x, y, helth, maxHelth) {
     context.fillStyle = "red";
@@ -168,7 +199,7 @@ function draw() {
         }else{
             for(let i=0;i<p.length;i++) {
                 if(p[i].connected) {
-                    if(i==id) context.fillStyle = "blue"; else context.fillStyle = "red";
+                    if(i==id) context.fillStyle = "red"; else context.fillStyle = "blue";
                     context.fillRect(p[i].x, p[i].y, p[i].w, p[i].h);
                     // context.fillRect(p[i].x+(p[i].w/2)-p[i].hp/2, p[i].y-15, p[i].hp, 5);
                     drawHealthbar(p[i].x+(p[i].w/2)-50, p[i].y-15, p[i].hp, 100);
@@ -195,25 +226,36 @@ function draw() {
             }
             minimap();
             context.fillStyle = 'black';
-        if(showInventory) {
-            context.strokeRect(200,60,4*(inbs+.7),40);
-            for(let x=0;x<4;x++) {
+            invX=d;
+            context.strokeRect(invX,invY-40,2*(inbs+.7),40);
+            for(let x=0;x<2;x++) {
                 for(let y=0;y<4;y++) {
                     context.font = '30px Arial';
                     context.lineWidth = 2;
-                    if(areColliding(200+x*(inbs+1), 100+y*(inbs+1), inbs, inbs, mouseX, mouseY, 0.5, 0.5)) {
-                        context.fillText(inveontoryGrid[x][y],200+(4*inbs-(context.measureText(inveontoryGrid[x][y]).width))/2, 90);
+                    if(areColliding(invX+x*(inbs+1), invY+y*(inbs+1), inbs, inbs, mouseX, mouseY, 0.5, 0.5)) {
+                        context.fillText(inveontoryGrid[x][y],invX+(2*inbs-(context.measureText(inveontoryGrid[x][y]).width))/2, invY-10);
                         context.lineWidth = 5;
                     }else{
                         context.lineWidth = 2;
                     }
-                    context.strokeRect(200+x*(inbs+1), 100+y*(inbs+1), inbs, inbs);
-                    for(let i=0;i<16;i++) {
-                        context.drawImage(images[y*4+x], 200+x*(inbs+1), 100+y*(inbs+1), inbs, inbs);
-                        context.lineWidth = 2;
-                    }
+                    context.strokeRect(invX+x*(inbs+1), invY+y*(inbs+1), inbs, inbs);
+                    context.drawImage(images[x*4+y], invX+x*(inbs+1), invY+y*(inbs+1), inbs, inbs);
+                    context.lineWidth = 2;
                 }
             }
+            // inveontoryGrid[0][0] = 'Pistol';inveontoryGrid[1][0] = 'AK-47';
+            // inveontoryGrid[0][1] = 'Lazer';inveontoryGrid[1][1] = 'Mine';
+            // inveontoryGrid[0][2] = 'Granade';inveontoryGrid[1][2] = 'Air strike';
+            // inveontoryGrid[0][3] = 'Dynamite';inveontoryGrid[1][3] = 'Bazooka';
+        if(selected=='Pistol' || selected=='AK-47' || selected=='Bazooka' || selected=='Lazer') {
+            let weaponImage = new Image(), weaponImage2 = new Image();
+            weaponImage.src = 'imgs/'+selected+'.png';
+            weaponImage2.src = 'imgs/'+selected+'1.png';
+            drawWeapon2(50, 31, weaponImage, weaponImage2);
+        }else if(selected!=undefined) {
+            let weaponImage = new Image(), weaponImage2 = new Image();
+            weaponImage.src = 'imgs/'+selected+'.png';
+            drawWeapon(50, 31, weaponImage, weaponImage2);
         }
     }
     context.restore();
@@ -221,7 +263,7 @@ function draw() {
 
 let showInventory = false;
 function keyup(key) {
-    if(key == 73 && waiting == false && turn == id) {
+    if(key == 73 && waiting == false ) {
         showInventory = !showInventory;
     }
 	console.log("KEY:",key);
@@ -229,16 +271,18 @@ function keyup(key) {
 let selected, clicks = 0;
 function mouseup() {
     console.log("X:",mouseX,"Y:", mouseY);
-    if(showInventory && waiting == false && turn == id) {
-        let x = Math.floor((mouseX-200)/inbs);
-        let y = Math.floor((mouseY-100)/inbs);
-        showInventory = false;
-        selected = inveontoryGrid[x][y];
-        clicks++;
-        console.log(selected);
+    if(showInventory && waiting == false) {
+            let x = Math.floor((mouseX-invX)/inbs);
+            let y = Math.floor((mouseY-invY)/inbs);
+            if(x>=0 && y>=0 && x<2 && y<4) {
+            showInventory = false;
+            selected = inveontoryGrid[x][y];
+            clicks++;
+            console.log(selected);
+        }
     }
-    if(selected!=undefined && waiting == false && turn == id) clicks++;
-    if(p[id].connected && selected != undefined && clicks>2 && waiting == false && turn == id) {
+    if(selected!=undefined && waiting == false ) clicks++;
+    if(p[id].connected && selected != undefined && clicks>2 && waiting == false) {
         socket.emit('shoot', mouseX, mouseY, id, selected);
     }
 }

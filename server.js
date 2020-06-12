@@ -10,8 +10,22 @@ function getFiles(name, file) {
 }
 getFiles('/', 'start.html')
 getFiles('game.js', 'game.js');
-getFiles('loading.gif', 'imgs/loading.gif');
-for(let i=0;i<16;i++) {
+
+getFiles('imgs/Pistol.png', 'imgs/Pistol.png');
+getFiles('imgs/Pistol1.png', 'imgs/Pistol1.png');
+getFiles('imgs/Bazooka.png', 'imgs/Bazooka.png');
+getFiles('imgs/Bazooka1.png', 'imgs/Bazooka1.png');
+getFiles('imgs/Lazer.png', 'imgs/Lazer.png');
+getFiles('imgs/Lazer1.png', 'imgs/Lazer1.png');
+getFiles('imgs/AK-47.png', 'imgs/AK-47.png');
+getFiles('imgs/AK-471.png', 'imgs/AK-471.png');
+getFiles('imgs/Air strike.png', 'imgs/Air strike.png');
+getFiles('imgs/Granade.png', 'imgs/Granade.png');
+getFiles('imgs/Dynamite.png', 'imgs/Dynamite.png');
+getFiles('imgs/Mine.png', 'imgs/Mine.png');
+getFiles('imgs/crosshair.png', 'imgs/crosshair.png');
+getFiles('imgs/plane.png', 'imgs/plane.png');
+for(let i=0;i<8;i++) {
     getFiles('imgs/inv/'+i+'.png', 'imgs/inv/'+i+'.png');
 }
 
