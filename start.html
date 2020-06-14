@@ -2,6 +2,7 @@
 <html>
 <head>
     <link rel="stylesheet" href="mycss.css">    
+    <title>Worms</title>
 </head>
     <body onload="init()">
         <h1>Worms</h1>
@@ -11,6 +12,7 @@
                 <input type="range" min="0" max="100" value="10" class="slider" id="myRange" onchange="changeVolume();">
                 <button onclick="musicc.play(); changeVolume()">Resume</button>
                 <button onclick="musicc.pause();">Pause</button><br><br>
+                <button onclick="window.location.href='/info'">How to play</button><br><br>
                 <button onclick="startgame();" id="play-btn">Play</button>
         </div>
         <div id="canvas">

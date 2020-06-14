@@ -30,6 +30,7 @@ getFiles('imgs/characters/worm3.png', 'imgs/characters/worm3.png');
 getFiles('music.mp3', 'music.mp3');
 getFiles('font.otf', 'font.otf');
 getFiles('mycss.css', 'mycss.css');
+getFiles('info', 'info.html');
 for(let i=0;i<8;i++) {
     getFiles('imgs/inv/'+i+'.png', 'imgs/inv/'+i+'.png');
 }
@@ -153,7 +154,7 @@ io.on('connection', (socket) => {
         io.emit('players', p[id_], id_);
     })
     socket.on("disconnect", () => {
-        if(playing && p[id] == undefined) {
+        if(playing && p[id] != undefined) {
             p[id].x = undefined;
             p[id].y = undefined
             p[id].connected = false;
@@ -214,7 +215,7 @@ io.on('connection', (socket) => {
                 setInterval(a,10);
             }
             if(type_ == 'Bazooka') {
-                b.push(new Bullet(p[id_].x+15, p[id_].y+15, tx, ty, id_, 80, type_));
+                b.push(new Bullet(p[id_].x+15, p[id_].y+15, tx, ty, id_, 100, type_));
             }
             if(type_ == 'Lazer') {
                 let ms = 0;
@@ -284,7 +285,6 @@ function removeBullet(index) {
 }
 
 function update() {
-    console.log(clients)
     for(let i=0;i<b.length;i++) {
         if(b[i]==undefined) break;
         if(b[i].x<=0 || b[i].x>=4000 || b[i].y<=0 || b[i].y>=4000 ) {
