@@ -214,7 +214,7 @@ io.on('connection', (socket) => {
                 setInterval(a,10);
             }
             if(type_ == 'Bazooka') {
-                b.push(new Bullet(p[id_].x+15, p[id_].y+15, tx, ty, id_, 100, type_));
+                b.push(new Bullet(p[id_].x+15, p[id_].y+15, tx, ty, id_, 80, type_));
             }
             if(type_ == 'Lazer') {
                 let ms = 0;
