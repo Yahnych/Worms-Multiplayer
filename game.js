@@ -270,7 +270,11 @@ function drawWithCamera() {
                     drawHealthbar(p[i].x+(p[i].w/2)-50, p[i].y-15, p[i].hp, 100);
                     context.font = "20px Arial";
                     context.fillStyle = "black";
-                    context.fillText(p[i].name, p[i].x-(context.measureText(p[i].name).width)/2, p[i].y-35);
+                    if(p[i].name == '') {
+                        context.fillText(p[i].id, p[i].x-(context.measureText(p[i].id).width)/2, p[i].y-35);
+                    }else{
+                        context.fillText(p[i].name, p[i].x-(context.measureText(p[i].name).width)/2, p[i].y-35);
+                    }
                 }
             }
             context.fillStyle = 'black';
