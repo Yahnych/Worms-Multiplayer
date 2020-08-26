@@ -1,4 +1,4 @@
-# Worms-telerik
+# Worms
 ``` 
 npm install express
 npm install socket.io
